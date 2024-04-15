@@ -1,0 +1,27 @@
+services:
+  ai-chatbot:
+    image: ashleyrudland87/ai-chatbot
+    servers:
+      - <%= ENV["VPS_IP"] %>
+    registry:
+      username:
+        - KAMAL_REGISTRY_USERNAME
+      password:
+        - KAMAL_REGISTRY_PASSWORD
+    port: 3000
+    volumes:
+      - "ai-chatbot-data:/ai-chatbot-data"
+
+  redis:
+    image: redis:latest
+    servers:
+      - <%= ENV["VPS_IP"] %>
+    port: 6379
+    volumes:
+      - "redis-data:/data"
+
+volumes:
+  ai-chatbot-data:
+    external: true
+  redis-data:
+    external: true
