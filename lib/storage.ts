@@ -1,6 +1,6 @@
 'use server'
 
-import { readFile, writeFile } from 'fs/promises'
+import { readFile, writeFile, stat } from 'fs/promises'
 import path from 'path'
 import { Chat, User } from '@/lib/types'
 
@@ -16,6 +16,15 @@ const parse = (json: string) => {
     return JSON.parse(json)
   } catch (error) {
     return null
+  }
+}
+
+const getFileSize = async (fileName: string) => {
+  try {
+    const stats = await stat(path.join(storageRoot, fileName))
+    return stats.size
+  } catch (error) {
+    return 0
   }
 }
 
@@ -123,6 +132,25 @@ class KeyValueStorage {
     })
     this.save()
   }
+
+  async getStats() {
+    const itemsSize = await getFileSize('items.json')
+    const groupsSize = await getFileSize('groups.json')
+    const dbSize = itemsSize + groupsSize
+
+    // count all the records by group
+    const records: { [group: string]: number } = {}
+
+    Object.keys(this.items).forEach(key => {
+      const group = key.split(':')[0]
+      records[group] = (records[group] || 0) + 1
+    })
+
+    return {
+      dbSize,
+      records
+    }
+  }
 }
 
 const kv = new KeyValueStorage()
@@ -148,3 +176,8 @@ export const insertUser = (payload: User) =>
   kv.setItem('user', payload.email, payload)
 
 export const getUserByEmail = (email: string) => kv.getItem<User>('user', email)
+
+export const getStats = async () => {
+  const stats = await kv.getStats()
+  return stats
+}
