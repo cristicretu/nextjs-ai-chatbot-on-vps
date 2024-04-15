@@ -6,6 +6,14 @@ import { kv } from '@vercel/kv'
 
 import { auth } from '@/auth'
 import { type Chat } from '@/lib/types'
+import {
+  deleteChatById,
+  deleteChatsByUserId,
+  getChatById,
+  getChatsByUserId,
+  insertChat,
+  updateChat
+} from '@/lib/storage'
 
 export async function getChats(userId?: string | null) {
   if (!userId) {
@@ -13,25 +21,14 @@ export async function getChats(userId?: string | null) {
   }
 
   try {
-    const pipeline = kv.pipeline()
-    const chats: string[] = await kv.zrange(`user:chat:${userId}`, 0, -1, {
-      rev: true
-    })
-
-    for (const chat of chats) {
-      pipeline.hgetall(chat)
-    }
-
-    const results = await pipeline.exec()
-
-    return results as Chat[]
+    return getChatsByUserId(userId)
   } catch (error) {
     return []
   }
 }
 
 export async function getChat(id: string, userId: string) {
-  const chat = await kv.hgetall<Chat>(`chat:${id}`)
+  const chat = await getChatById(id)
 
   if (!chat || (userId && chat.userId !== userId)) {
     return null
@@ -50,7 +47,7 @@ export async function removeChat({ id, path }: { id: string; path: string }) {
   }
 
   //Convert uid to string for consistent comparison with session.user.id
-  const uid = String(await kv.hget(`chat:${id}`, 'userId'))
+  const uid = (await getChatById(id))?.userId
 
   if (uid !== session?.user?.id) {
     return {
@@ -58,8 +55,7 @@ export async function removeChat({ id, path }: { id: string; path: string }) {
     }
   }
 
-  await kv.del(`chat:${id}`)
-  await kv.zrem(`user:chat:${session.user.id}`, `chat:${id}`)
+  await deleteChatById(id)
 
   revalidatePath('/')
   return revalidatePath(path)
@@ -74,25 +70,14 @@ export async function clearChats() {
     }
   }
 
-  const chats: string[] = await kv.zrange(`user:chat:${session.user.id}`, 0, -1)
-  if (!chats.length) {
-    return redirect('/')
-  }
-  const pipeline = kv.pipeline()
-
-  for (const chat of chats) {
-    pipeline.del(chat)
-    pipeline.zrem(`user:chat:${session.user.id}`, chat)
-  }
-
-  await pipeline.exec()
+  await deleteChatsByUserId(session.user.id)
 
   revalidatePath('/')
   return redirect('/')
 }
 
 export async function getSharedChat(id: string) {
-  const chat = await kv.hgetall<Chat>(`chat:${id}`)
+  const chat = await getChatById(id)
 
   if (!chat || !chat.sharePath) {
     return null
@@ -110,7 +95,7 @@ export async function shareChat(id: string) {
     }
   }
 
-  const chat = await kv.hgetall<Chat>(`chat:${id}`)
+  const chat = await getChatById(id)
 
   if (!chat || chat.userId !== session.user.id) {
     return {
@@ -123,7 +108,7 @@ export async function shareChat(id: string) {
     sharePath: `/share/${chat.id}`
   }
 
-  await kv.hmset(`chat:${chat.id}`, payload)
+  await updateChat(id, payload)
 
   return payload
 }
@@ -132,13 +117,7 @@ export async function saveChat(chat: Chat) {
   const session = await auth()
 
   if (session && session.user) {
-    const pipeline = kv.pipeline()
-    pipeline.hmset(`chat:${chat.id}`, chat)
-    pipeline.zadd(`user:chat:${chat.userId}`, {
-      score: Date.now(),
-      member: `chat:${chat.id}`
-    })
-    await pipeline.exec()
+    await insertChat(chat)
   } else {
     return
   }

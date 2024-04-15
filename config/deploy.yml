@@ -1,27 +1,13 @@
-services:
-  ai-chatbot:
-    image: ashleyrudland87/ai-chatbot
-    servers:
-      - <%= ENV["VPS_IP"] %>
-    registry:
-      username:
+# config/deploy.yml
+service: ai-chatbot
+image: ashleyrudland87/ai-chatbot
+servers:
+    - <%= ENV["VPS_IP"] %>
+registry:
+    username:
         - KAMAL_REGISTRY_USERNAME
-      password:
+    password:
         - KAMAL_REGISTRY_PASSWORD
-    port: 3000
-    volumes:
-      - "ai-chatbot-data:/ai-chatbot-data"
-
-  redis:
-    image: redis:latest
-    servers:
-      - <%= ENV["VPS_IP"] %>
-    port: 6379
-    volumes:
-      - "redis-data:/data"
-
+port: 3000
 volumes:
-  ai-chatbot-data:
-    external: true
-  redis-data:
-    external: true
+  - "ai-chatbot-data:/ai-chatbot-data/"
