@@ -11,3 +11,7 @@ registry:
 port: 3000
 volumes:
   - "ai-chatbot-data:/ai-chatbot-data/"
+env:
+  secret:
+    - OPENAI_API_KEY
+    - AUTH_SECRET

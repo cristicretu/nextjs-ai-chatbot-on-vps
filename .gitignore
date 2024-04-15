@@ -39,3 +39,4 @@ yarn-error.log*
 
 groups.json
 items.json
+deploy.sh
