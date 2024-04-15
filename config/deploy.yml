@@ -1,5 +1,5 @@
 # config/deploy.yml
-service: ai-chatbot
+service: server
 image: ashleyrudland87/ai-chatbot
 servers:
     - <%= ENV["VPS_IP"] %>

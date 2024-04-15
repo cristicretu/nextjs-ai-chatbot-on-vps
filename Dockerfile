@@ -4,18 +4,20 @@ FROM node:20-alpine AS base
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN apk add --no-cache libc6-compat curl python3 py3-pip
 
+RUN npm install pnpm -g
+
 FROM base AS deps
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN npm run build
+RUN pnpm run build
 
 FROM base AS runner
 WORKDIR /app
@@ -25,7 +27,6 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/public ./public
 RUN mkdir .next
 RUN mkdir -p /ai-chatbot-data && chown -R nextjs:nodejs /ai-chatbot-data
