@@ -9,6 +9,10 @@ RUN npm install pnpm -g
 FROM base AS deps
 WORKDIR /app
 
+# add env vars as config/deploy.yml is not working
+RUN echo "OPENAI_API_KEY=\"$OPENAI_API_KEY\"" > ./env
+RUN echo "AUTH_SECRET=\"$AUTH_SECRET\"" >> ./env
+
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 
